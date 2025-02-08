@@ -119,10 +119,11 @@ def convert_to_midi(wav_file):
     # Extract chords after reconstructing the MIDI
     wav_filename = os.path.basename(wav_file).replace(".wav", "")
     chords_csv_path = detect_chords(reconstructed_midi, wav_filename)
+    print(chords_csv_path)
 
     if chords_csv_path:
         print(f"✅ Chord detection complete. Chords saved in {chords_csv_path}")
-        return f"MIDI file and chords CSV created: <a href='{chords_csv_path}' download>Download Chords CSV</a>"
+        return redirect(url_for('show_chords', filename=chords_csv_path))
     return None
 
 def process_midi(midi_path):
@@ -280,6 +281,18 @@ def convert(filename):
     if response:
         return response
     return redirect(url_for('index'))
+
+@app.route('/chords/<filename>', methods=['GET'])
+def show_chords(filename):
+    chords_csv_path = filename
+
+    if not os.path.exists(chords_csv_path):
+        return "Chord file not found.", 404
+
+    df = pd.read_csv(chords_csv_path)
+    chords = df.values.tolist()
+
+    return render_template('chords.html', chords=chords)
 
 
 if __name__ == '__main__':
