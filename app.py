@@ -2,8 +2,14 @@ from flask import Flask, render_template, request, redirect, url_for
 import os
 import subprocess
 import yt_dlp
+import mido
+import joblib
+import pandas as pd
 
 app = Flask(__name__)
+
+model = joblib.load("chord_classifier.pkl")
+mlb = joblib.load("notes_encoder.pkl")
 UPLOAD_FOLDER = 'songs'
 OUTPUT_DIR = 'output'
 MIDI_DIR = "midi"
@@ -11,6 +17,8 @@ MODEL_NAME = "htdemucs_6s"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+TIME_THRESHOLD = 50
+MERGE_THRESHOLD = 1000
 
 def list_songs(directory="songs"):
     """Lists all files in the songs folder."""
@@ -78,7 +86,7 @@ def list_output_files(file_path, model=MODEL_NAME):
     return files, output_path
 
 def convert_to_midi(wav_file):
-    """Converts a WAV file to MIDI using Basic Pitch if the MIDI file does not already exist."""
+    """Converts a WAV file to MIDI, processes it, reconstructs it, and extracts chords."""
     if not os.path.exists(wav_file):
         print(f"❌ Error: File {wav_file} not found.")
         return None
@@ -88,30 +96,146 @@ def convert_to_midi(wav_file):
 
     if os.path.exists(midi_file):
         print(f"✅ MIDI file already exists: {midi_file}")
-        return midi_file
+    else:
+        os.makedirs(midi_output_dir, exist_ok=True)
+        print(f"🔄 Converting {wav_file} to MIDI...")
+        command = [
+            "basic-pitch",
+            midi_output_dir,  # Output directory
+            wav_file,
+            "--save-midi"
+        ]
+        subprocess.run(command, check=True)
+        midi_files = [f for f in os.listdir(midi_output_dir) if f.endswith(".mid")]
+        if not midi_files:
+            print("❌ Error: No MIDI file was created.")
+            return None
+        midi_file = os.path.join(midi_output_dir, midi_files[0])
+        print(f"✅ MIDI conversion complete. MIDI file saved as {midi_file}")
 
-    os.makedirs(midi_output_dir, exist_ok=True)
+    processed_midi = process_midi(midi_file)
+    reconstructed_midi = reconstruct_midi(midi_file, processed_midi)
 
-    print(f"🔄 Converting {wav_file} to MIDI...")
+    # Extract chords after reconstructing the MIDI
+    wav_filename = os.path.basename(wav_file).replace(".wav", "")
+    chords_csv_path = detect_chords(reconstructed_midi, wav_filename)
 
-    command = [
-        "basic-pitch",
-        midi_output_dir,  # Positional argument for output directory
-        wav_file,
-        "--save-midi"
-    ]
+    if chords_csv_path:
+        print(f"✅ Chord detection complete. Chords saved in {chords_csv_path}")
+        return f"MIDI file and chords CSV created: <a href='{chords_csv_path}' download>Download Chords CSV</a>"
+    return None
 
-    subprocess.run(command, check=True)
+def process_midi(midi_path):
+    """Processes the MIDI file by grouping notes into chords."""
+    midi_file = mido.MidiFile(midi_path)
+    filtered_midi = mido.MidiFile()
+    filtered_tracks = []
 
-    midi_files = [f for f in os.listdir(midi_output_dir) if f.endswith(".mid")]
+    for track in midi_file.tracks:
+        new_track = mido.MidiTrack()
+        note_ranges = {}
 
-    if not midi_files:
-        print("❌ Error: No MIDI file was created.")
+        for msg in track:
+            if msg.type == "note_on" and msg.velocity > 0:
+                if msg.note in note_ranges:
+                    last_note = note_ranges[msg.note]
+                    if msg.time - last_note['end_time'] <= MERGE_THRESHOLD:
+                        last_note['end_time'] = msg.time
+                    else:
+                        note_ranges[msg.note] = {'start_time': msg.time, 'end_time': msg.time}
+                else:
+                    note_ranges[msg.note] = {'start_time': msg.time, 'end_time': msg.time}
+
+            elif msg.type == "note_off" or (msg.type == "note_on" and msg.velocity == 0):
+                if msg.note in note_ranges:
+                    note_ranges[msg.note]['end_time'] = msg.time
+
+        for note, times in note_ranges.items():
+            new_track.append(mido.Message("note_on", note=note, velocity=64, time=times['start_time']))
+            new_track.append(mido.Message("note_off", note=note, velocity=0, time=times['end_time']))
+
+        filtered_tracks.append(new_track)
+
+    filtered_midi.tracks.extend(filtered_tracks)
+    processed_midi_path = midi_path.replace(".mid", "_processed.mid")
+    filtered_midi.save(processed_midi_path)
+
+    print(f"✅ Processed MIDI saved as {processed_midi_path}")
+    return processed_midi_path
+
+def reconstruct_midi(original_midi, processed_midi):
+    """Reorders the processed MIDI according to the original sequence."""
+    original_midi_file = mido.MidiFile(original_midi)
+    processed_midi_file = mido.MidiFile(processed_midi)
+    reconstructed_midi = mido.MidiFile()
+    reconstructed_tracks = []
+
+    original_sequence = [msg.note for track in original_midi_file.tracks for msg in track if
+                         msg.type == "note_on" and msg.velocity > 0]
+    processed_notes = [msg for track in processed_midi_file.tracks for msg in track if
+                       msg.type == "note_on" and msg.velocity > 0]
+
+    new_track = mido.MidiTrack()
+    note_map = {}
+
+    for note in original_sequence:
+        for msg in processed_notes:
+            if msg.note == note and note not in note_map:
+                note_map[note] = msg
+                break
+
+    for note in original_sequence:
+        if note in note_map:
+            msg_on = note_map[note]
+            msg_off = mido.Message("note_off", note=note, velocity=0, time=msg_on.time + 200)
+            new_track.append(msg_on)
+            new_track.append(msg_off)
+
+    reconstructed_tracks.append(new_track)
+    reconstructed_midi.tracks.extend(reconstructed_tracks)
+
+    reconstructed_path = processed_midi.replace("_processed.mid", "_reconstructed.mid")
+    reconstructed_midi.save(reconstructed_path)
+
+    print(f"✅ Reconstructed MIDI saved as {reconstructed_path}")
+    return reconstructed_path
+
+def detect_chords(midi_path, wav_filename):
+    """Detects chords in the MIDI file using the trained model and saves the output in the same folder with a proper name."""
+    if not os.path.exists(midi_path):
+        print(f"❌ Error: MIDI file {midi_path} not found.")
         return None
 
-    midi_file = os.path.join(midi_output_dir, midi_files[0])
-    print(f"✅ MIDI conversion complete. MIDI file saved as {midi_file}")
-    return midi_file
+    midi_file = mido.MidiFile(midi_path)
+    chords = []
+    current_chord = []
+    current_time = 0
+
+    for track in midi_file.tracks:
+        for msg in track:
+            if msg.type == "note_on" and msg.velocity > 0:
+                if current_chord and (msg.time - current_time > TIME_THRESHOLD):
+                    chords.append(sorted(current_chord))
+                    current_chord = []
+
+                current_chord.append(msg.note)
+                current_time = msg.time
+
+    if current_chord:
+        chords.append(sorted(current_chord))
+
+    valid_chords = [(chord, model.predict(mlb.transform([chord]))[0] if chord else "Unknown") for chord in chords]
+
+    df = pd.DataFrame(valid_chords, columns=["Notes", "Predicted Chord"])
+
+    # Save CSV with the correct WAV-based name
+    output_folder = os.path.dirname(midi_path)
+    chords_csv_path = os.path.join(output_folder, f"{wav_filename}_detected_chords.csv")
+
+    df.to_csv(chords_csv_path, index=False)
+
+    print(f"✅ Chords saved in {chords_csv_path}")
+    return chords_csv_path
 
 @app.route('/')
 def index():
@@ -152,10 +276,11 @@ def convert(filename):
     else:
         wav_file_path = os.path.join(OUTPUT_DIR, MODEL_NAME, filename)
 
-    midi_file = convert_to_midi(wav_file_path)
-    if midi_file:
-        return f"MIDI file created: <a href='{midi_file}' download>Download MIDI</a>"
+    response = convert_to_midi(wav_file_path)
+    if response:
+        return response
     return redirect(url_for('index'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
