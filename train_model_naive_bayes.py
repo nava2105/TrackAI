@@ -3,7 +3,7 @@ import joblib
 import pandas as pd
 from mido import MidiFile
 from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.ensemble import RandomForestClassifier  # Using Random Forest
+from sklearn.naive_bayes import GaussianNB  # Using Naive Bayes
 import re  # For cleaning chord names
 
 # Paths
@@ -46,7 +46,7 @@ X = mlb.fit_transform(df['notes'])  # Convert lists to a feature matrix
 y = df['chord']
 
 # Train the model with Random Forest
-model = RandomForestClassifier(n_estimators=100, max_depth=20, min_samples_split=5, min_samples_leaf=2, random_state=42)
+model = GaussianNB()
 model.fit(X, y)
 
 # Save model and encoder

@@ -3,7 +3,7 @@ import joblib
 import pandas as pd
 from mido import MidiFile
 from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.ensemble import RandomForestClassifier  # Using Random Forest instead of XGBoost
+from sklearn.svm import SVC  # Using support vector machines
 import re  # For cleaning chord names
 
 # Paths
@@ -46,7 +46,7 @@ X = mlb.fit_transform(df['notes'])  # Convert lists to a feature matrix
 y = df['chord']
 
 # Train the model with Random Forest
-model = RandomForestClassifier(n_estimators=500, max_depth=20, min_samples_split=5, min_samples_leaf=2, random_state=42)
+model = SVC(kernel='poly', C=1, degree=2, gamma='scale', random_state=42)
 model.fit(X, y)
 
 # Save model and encoder
@@ -54,3 +54,22 @@ joblib.dump(model, "chord_classifier.pkl")
 joblib.dump(mlb, "notes_encoder.pkl")
 
 print("Model training complete. Model saved as 'chord_classifier.pkl' and encoder as 'notes_encoder.pkl'.")
+
+""""
+Model Accuracy: 0.86
+Testing complete. Results saved in 'test_results.csv'.
+              filename  chord predicted_chord
+0         I - BbM7.mid   BbM7          Bbmaj7
+1         I - BbM9.mid   BbM9          Bbmaj9
+2          I - BM7.mid    BM7           Bmaj7
+3          I - BM9.mid    BM9           Bmaj9
+4           i - Dm.mid     Dm              Dm
+..                 ...    ...             ...
+255  vii-v - Emaj7.mid  Emaj7           Emaj7
+256  vii-v - Emaj9.mid  Emaj9           Emaj9
+257   vii-v - EmM7.mid   EmM7            EmM7
+258  vii-v - Esus2.mid  Esus2           Esus2
+259  vii-v - Esus4.mid  Esus4           Esus4
+
+[260 rows x 3 columns]
+"""
