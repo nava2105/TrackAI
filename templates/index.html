@@ -35,10 +35,13 @@
     {% if songs %}
     <ul class="list-group">
         {% for song in songs %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                {{ song }}
-                <div>
-                    <a href="{{ url_for('process', filename=song) }}" class="btn btn-sm btn-info">Layers</a>
+            <li class="list-group-item d-flex flex-column">
+                <span>{{ song }}</span>
+                <audio id="audio-{{ loop.index }}" src="{{ url_for('serve_song', filename=song) }}" class="w-100 mb-2" controls></audio>
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <a href="{{ url_for('process', filename=song) }}" class="btn btn-sm btn-info">Layers</a>
+                    </div>
                 </div>
             </li>
         {% endfor %}

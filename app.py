@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory
 import os
 import subprocess
 import yt_dlp
@@ -202,7 +202,7 @@ def reconstruct_midi(original_midi, processed_midi):
     return reconstructed_path
 
 def detect_chords(midi_path, wav_filename):
-    """Detects chords in the MIDI file using the trained model and saves the output in the same folder with a proper name."""
+    """Detects chords in the MIDI file, avoiding immediate repetitions and filtering out similar chords."""
     if not os.path.exists(midi_path):
         print(f"❌ Error: MIDI file {midi_path} not found.")
         return None
@@ -216,27 +216,48 @@ def detect_chords(midi_path, wav_filename):
         for msg in track:
             if msg.type == "note_on" and msg.velocity > 0:
                 if current_chord and (msg.time - current_time > TIME_THRESHOLD):
-                    chords.append(sorted(current_chord))
+                    chords.append(tuple(sorted(set(current_chord))))
                     current_chord = []
-
                 current_chord.append(msg.note)
                 current_time = msg.time
 
     if current_chord:
-        chords.append(sorted(current_chord))
+        chords.append(tuple(sorted(set(current_chord))))
 
+    # Predict chords
     valid_chords = [(chord, model.predict(mlb.transform([chord]))[0] if chord else "Unknown") for chord in chords]
 
-    df = pd.DataFrame(valid_chords, columns=["Notes", "Predicted Chord"])
+    # Filter immediate repetitions and similar chords
+    filtered_chords = []
+    last_prediction = None
+
+    for chord, prediction in valid_chords:
+        if prediction != last_prediction and not is_similar_to_last(filtered_chords, chord):
+            filtered_chords.append((chord, prediction))
+            last_prediction = prediction
+
+    # Create a DataFrame
+    df = pd.DataFrame(filtered_chords, columns=["Notes", "Predicted Chord"])
 
     # Save CSV with the correct WAV-based name
     output_folder = os.path.dirname(midi_path)
-    chords_csv_path = os.path.join(output_folder, f"{wav_filename}_detected_chords.csv")
+    chords_csv_path = os.path.join(output_folder, f"{wav_filename}_filtered_chords.csv")
 
     df.to_csv(chords_csv_path, index=False)
 
-    print(f"✅ Chords saved in {chords_csv_path}")
+    print(f"✅ Filtered chords saved in {chords_csv_path}")
     return chords_csv_path
+
+def is_similar(chord1, chord2, threshold=3):
+    """Checks if two chords are similar based on overlapping notes."""
+    return len(set(chord1) & set(chord2)) >= threshold
+
+def is_similar_to_last(filtered_chords, current_chord, threshold=3):
+    """Checks if the current chord is similar to any of the last few filtered chords."""
+    for chord, _ in filtered_chords[-3:]:  # Compare with the last 3 filtered chords
+        if is_similar(chord, current_chord, threshold):
+            return True
+    return False
 
 @app.route('/')
 def index():
@@ -294,6 +315,14 @@ def show_chords(filename):
 
     return render_template('chords.html', chords=chords)
 
+@app.route('/songs/<filename>')
+def serve_song(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/output/<path:filename>')
+def serve_output_file(filename):
+    """Serves audio files from the output directory."""
+    return send_from_directory(OUTPUT_DIR + '/' + MODEL_NAME, filename)
 
 if __name__ == '__main__':
     app.run(debug=True)
