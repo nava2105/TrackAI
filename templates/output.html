@@ -18,9 +18,11 @@
                     <span>{{ file }}</span>
                     <audio id="audio-{{ loop.index }}" src="{{ url_for('serve_output_file', filename=subdir + '/' + file) }}" class="w-100 mb-2" controls></audio>
                     <div class="d-flex justify-content-between">
-                        <div>
-                            <a href="{{ url_for('convert', filename=file, subdir=subdir) }}" class="btn btn-sm btn-warning">Convert to MIDI</a>
-                        </div>
+                        {% if 'drums' not in file and 'vocals' not in file and 'other' not in file %}
+                            <div>
+                                <a href="{{ url_for('convert', filename=file, subdir=subdir) }}" class="btn btn-sm btn-warning">Convert to MIDI</a>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </li>
