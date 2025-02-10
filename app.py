@@ -119,12 +119,15 @@ def convert_to_midi(wav_file):
     # Extract chords after reconstructing the MIDI
     wav_filename = os.path.basename(wav_file).replace(".wav", "")
     chords_csv_path = detect_chords(reconstructed_midi, wav_filename)
-    print(chords_csv_path)
+
+    notes_csv_path = detect_notes(reconstructed_midi, wav_filename)
+
+    if notes_csv_path:
+        print(f"✅ Notes saved in {notes_csv_path}")
 
     if chords_csv_path:
         print(f"✅ Chord detection complete. Chords saved in {chords_csv_path}")
-        return redirect(url_for('show_chords', filename=chords_csv_path))
-    return None
+    return {"status": "success", "message": "MIDI conversion complete, chords and notes extracted"}
 
 def process_midi(midi_path):
     """Processes the MIDI file by grouping notes into chords."""
@@ -259,6 +262,46 @@ def is_similar_to_last(filtered_chords, current_chord, threshold=3):
             return True
     return False
 
+def detect_notes(midi_path, wav_filename):
+    """Extracts notes from the MIDI file and saves them to a CSV."""
+    if not os.path.exists(midi_path):
+        print(f"❌ Error: MIDI file {midi_path} not found.")
+        return None
+
+    midi_file = mido.MidiFile(midi_path)
+    notes = []
+
+    for track in midi_file.tracks:
+        for msg in track:
+            if msg.type == "note_on" and msg.velocity > 0:
+                notes.append(msg.note)
+
+    # Create a DataFrame
+    df = pd.DataFrame(notes, columns=["Note"])
+
+    # Save CSV with the correct WAV-based name
+    output_folder = os.path.dirname(midi_path)
+    notes_csv_path = os.path.join(output_folder, f"{wav_filename}_notes.csv")
+
+    df.to_csv(notes_csv_path, index=False)
+
+    print(f"✅ Notes saved in {notes_csv_path}")
+    return notes_csv_path
+
+
+@app.route('/notes/<path:filename>', methods=['GET'])
+def show_notes(filename):
+    notes_csv_path = os.path.normpath(os.path.join(OUTPUT_DIR, MODEL_NAME, filename))
+    print(f"Looking for notes file at: {notes_csv_path}")
+
+    if not os.path.exists(notes_csv_path):
+        return "Notes file not found.", 404
+
+    df = pd.read_csv(notes_csv_path)
+    notes = df["Note"].tolist()
+
+    return render_template('notes.html', notes=notes)
+
 @app.route('/')
 def index():
     songs = list_songs(UPLOAD_FOLDER)
@@ -298,14 +341,16 @@ def convert(filename):
     else:
         wav_file_path = os.path.join(OUTPUT_DIR, MODEL_NAME, filename)
 
-    response = convert_to_midi(wav_file_path)
-    if response:
-        return response
-    return redirect(url_for('index'))
+    convert_to_midi(wav_file_path)
 
-@app.route('/chords/<filename>', methods=['GET'])
+    # Return a 204 No Content response to indicate success without content.
+    return '', 204
+
+
+@app.route('/chords/<path:filename>', methods=['GET'])
 def show_chords(filename):
-    chords_csv_path = filename
+    chords_csv_path = os.path.normpath(os.path.join(OUTPUT_DIR, MODEL_NAME, filename))
+    print(f"Looking for chords file at: {chords_csv_path}")
 
     if not os.path.exists(chords_csv_path):
         return "Chord file not found.", 404

@@ -19,8 +19,10 @@
                     <audio id="audio-{{ loop.index }}" src="{{ url_for('serve_output_file', filename=subdir + '/' + file) }}" class="w-100 mb-2" controls></audio>
                     <div class="d-flex justify-content-between">
                         {% if 'drums' not in file and 'vocals' not in file and 'other' not in file %}
-                            <div>
+                            <div class="d-flex justify-content-between">
                                 <a href="{{ url_for('convert', filename=file, subdir=subdir) }}" class="btn btn-sm btn-warning">Convert to MIDI</a>
+                                <a href="{{ url_for('show_chords', filename=subdir + '/midi/' + file.replace('.wav', '_filtered_chords.csv').replace(' ', '%20')) }}" class="btn btn-sm btn-info">View Chords</a>
+                                <a href="{{ url_for('show_notes', filename=subdir + '/midi/' + file.replace('.wav', '_notes.csv').replace(' ', '%20')) }}" class="btn btn-sm btn-success">View Notes</a>
                             </div>
                         {% endif %}
                     </div>
