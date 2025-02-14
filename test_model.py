@@ -2,7 +2,7 @@ import os
 import joblib
 import pandas as pd
 from mido import MidiFile
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, classification_report
 
 # Load trained model and encoder
 model = joblib.load("chord_classifier.pkl")
@@ -56,3 +56,7 @@ df_test.to_csv("test_results.csv", index=False)
 # Print results
 print("Testing complete. Results saved in 'test_results.csv'.")
 print(df_test[["filename", "chord", "predicted_chord"]])
+
+report = classification_report(df_test["chord"], df_test["predicted_chord"], zero_division=0)
+print("Classification Report:")
+print(report)

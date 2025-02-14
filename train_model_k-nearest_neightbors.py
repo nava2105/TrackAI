@@ -46,7 +46,7 @@ X = mlb.fit_transform(df['notes'])  # Convert lists to a feature matrix
 y = df['chord']
 
 # Train the model with Random Forest
-model = KNeighborsClassifier(n_neighbors=2)
+model = KNeighborsClassifier(n_neighbors=8)
 model.fit(X, y)
 
 # Save model and encoder
@@ -56,7 +56,7 @@ joblib.dump(mlb, "notes_encoder.pkl")
 print("Model training complete. Model saved as 'chord_classifier.pkl' and encoder as 'notes_encoder.pkl'.")
 
 """"
-Model Accuracy: 0.86
+Model Accuracy: 0.85
 Testing complete. Results saved in 'test_results.csv'.
               filename  chord predicted_chord
 0         I - BbM7.mid   BbM7            BbM7

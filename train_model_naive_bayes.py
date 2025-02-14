@@ -4,6 +4,10 @@ import pandas as pd
 from mido import MidiFile
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.naive_bayes import GaussianNB  # Using Naive Bayes
+# from sklearn.naive_bayes import MultinomialNB
+# from sklearn.naive_bayes import BernoulliNB
+# from sklearn.naive_bayes import ComplementNB
+# from sklearn.naive_bayes import CategoricalNB
 import re  # For cleaning chord names
 
 # Paths
@@ -45,7 +49,8 @@ mlb = MultiLabelBinarizer()
 X = mlb.fit_transform(df['notes'])  # Convert lists to a feature matrix
 y = df['chord']
 
-# Train the model with Random Forest
+# Train the model with Naive Bayes Gaussian
+# Variance (smoothing) to avoid problems with very small values that can cause numerical instability
 model = GaussianNB()
 model.fit(X, y)
 
@@ -56,17 +61,94 @@ joblib.dump(mlb, "notes_encoder.pkl")
 print("Model training complete. Model saved as 'chord_classifier.pkl' and encoder as 'notes_encoder.pkl'.")
 
 """"
-Model Accuracy: 0.86
+Gaussian
+Model Accuracy: 0.10
+Testing complete. Results saved in 'test_results.csv'.
+              filename  chord predicted_chord
+0         I - BbM7.mid   BbM7            BbM7
+1         I - BbM9.mid   BbM9            BbM7
+2          I - BM7.mid    BM7         Cb7sus4
+3          I - BM9.mid    BM9         Cb7sus4
+4           i - Dm.mid     Dm              C2
+..                 ...    ...             ...
+255  vii-v - Emaj7.mid  Emaj7          Emadd9
+256  vii-v - Emaj9.mid  Emaj9          Emadd9
+257   vii-v - EmM7.mid   EmM7          Emadd9
+258  vii-v - Esus2.mid  Esus2          Emadd9
+259  vii-v - Esus4.mid  Esus4          Emadd9
+
+[260 rows x 3 columns]
+"""
+""""
+Multinomial
+Model Accuracy: 0.68
+Testing complete. Results saved in 'test_results.csv'.
+              filename  chord predicted_chord
+0         I - BbM7.mid   BbM7          Bbmaj7
+1         I - BbM9.mid   BbM9          Bbmaj9
+2          I - BM7.mid    BM7              B7
+3          I - BM9.mid    BM9              B9
+4           i - Dm.mid     Dm             Dm7
+..                 ...    ...             ...
+255  vii-v - Emaj7.mid  Emaj7           Emaj7
+256  vii-v - Emaj9.mid  Emaj9           Emaj9
+257   vii-v - EmM7.mid   EmM7            EmM7
+258  vii-v - Esus2.mid  Esus2           Esus2
+259  vii-v - Esus4.mid  Esus4           Esus4
+
+[260 rows x 3 columns]
+"""
+""""
+Bernoulli
+Model Accuracy: 0.75
 Testing complete. Results saved in 'test_results.csv'.
               filename  chord predicted_chord
 0         I - BbM7.mid   BbM7          Bbmaj7
 1         I - BbM9.mid   BbM9          Bbmaj9
 2          I - BM7.mid    BM7           Bmaj7
 3          I - BM9.mid    BM9           Bmaj9
-4           i - Dm.mid     Dm              Dm
+4           i - Dm.mid     Dm             Dm7
 ..                 ...    ...             ...
 255  vii-v - Emaj7.mid  Emaj7           Emaj7
-256  vii-v - Emaj9.mid  Emaj9           Emaj9
+256  vii-v - Emaj9.mid  Emaj9           Eadd9
+257   vii-v - EmM7.mid   EmM7            EmM7
+258  vii-v - Esus2.mid  Esus2           Esus2
+259  vii-v - Esus4.mid  Esus4           Esus4
+
+[260 rows x 3 columns]
+"""
+""""
+Complement
+Model Accuracy: 0.20
+Testing complete. Results saved in 'test_results.csv'.
+              filename  chord predicted_chord
+0         I - BbM7.mid   BbM7            Bbm7
+1         I - BbM9.mid   BbM9            Bbm9
+2          I - BM7.mid    BM7             Bm7
+3          I - BM9.mid    BM9             Bm9
+4           i - Dm.mid     Dm             Dm9
+..                 ...    ...             ...
+255  vii-v - Emaj7.mid  Emaj7              E9
+256  vii-v - Emaj9.mid  Emaj9              E9
+257   vii-v - EmM7.mid   EmM7             Em7
+258  vii-v - Esus2.mid  Esus2              E9
+259  vii-v - Esus4.mid  Esus4             Em7
+
+[260 rows x 3 columns]
+"""
+""""
+Categorical
+Model Accuracy: 0.75
+Testing complete. Results saved in 'test_results.csv'.
+              filename  chord predicted_chord
+0         I - BbM7.mid   BbM7          Bbmaj7
+1         I - BbM9.mid   BbM9          Bbmaj9
+2          I - BM7.mid    BM7           Bmaj7
+3          I - BM9.mid    BM9           Bmaj9
+4           i - Dm.mid     Dm             Dm7
+..                 ...    ...             ...
+255  vii-v - Emaj7.mid  Emaj7           Emaj7
+256  vii-v - Emaj9.mid  Emaj9           Eadd9
 257   vii-v - EmM7.mid   EmM7            EmM7
 258  vii-v - Esus2.mid  Esus2           Esus2
 259  vii-v - Esus4.mid  Esus4           Esus4

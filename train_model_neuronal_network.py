@@ -46,7 +46,7 @@ X = mlb.fit_transform(df['notes'])  # Convert lists to a feature matrix
 y = df['chord']
 
 # Train the model with Random Forest
-model = MLPClassifier(hidden_layer_sizes=(100, 50, 25), max_iter=100, random_state=42)
+model = MLPClassifier(hidden_layer_sizes=(450, 300, 200, 100, 50, 25), max_iter=1000, random_state=42)
 model.fit(X, y)
 
 # Save model and encoder
@@ -56,17 +56,17 @@ joblib.dump(mlb, "notes_encoder.pkl")
 print("Model training complete. Model saved as 'chord_classifier.pkl' and encoder as 'notes_encoder.pkl'.")
 
 """"
-Model Accuracy: 0.86
+Model Accuracy: 0.88
 Testing complete. Results saved in 'test_results.csv'.
               filename  chord predicted_chord
 0         I - BbM7.mid   BbM7          Bbmaj7
-1         I - BbM9.mid   BbM9          Bbmaj9
+1         I - BbM9.mid   BbM9            BbM9
 2          I - BM7.mid    BM7           Bmaj7
 3          I - BM9.mid    BM9           Bmaj9
 4           i - Dm.mid     Dm              Dm
 ..                 ...    ...             ...
 255  vii-v - Emaj7.mid  Emaj7           Emaj7
-256  vii-v - Emaj9.mid  Emaj9           Emaj9
+256  vii-v - Emaj9.mid  Emaj9             EM9
 257   vii-v - EmM7.mid   EmM7            EmM7
 258  vii-v - Esus2.mid  Esus2           Esus2
 259  vii-v - Esus4.mid  Esus4           Esus4
