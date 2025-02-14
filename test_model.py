@@ -9,7 +9,7 @@ model = joblib.load("chord_classifier.pkl")
 mlb = joblib.load("notes_encoder.pkl")
 
 # Path to the test MIDI folder
-test_midi_folder = "C:/Users/Mateo/Documents/UCE/2024 - 2025/mineria/7200 fichiers MIDI accords piano - Ressource/testing"
+test_midi_folder = "C:/Users/Mateo/Documents/UCE/2024 - 2025/mineria/7200 fichiers MIDI accords piano - Ressource/training"
 
 # Function to parse MIDI files for testing
 def parse_midi(midi_path):
