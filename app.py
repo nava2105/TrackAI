@@ -304,7 +304,12 @@ def show_notes(filename):
 
 @app.route('/')
 def index():
-    songs = list_songs(UPLOAD_FOLDER)
+    search_query = request.args.get('search', '').strip().lower()
+    songs = list_songs(app.config['UPLOAD_FOLDER'])
+
+    if search_query:
+        songs = [song for song in songs if search_query in song.lower()]
+
     return render_template('index.html', songs=songs)
 
 @app.route('/upload', methods=['POST'])

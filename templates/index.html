@@ -30,6 +30,15 @@
         <button type="submit" class="btn btn-success">Download</button>
     </form>
 
+    <!-- Search Form -->
+    <h2 class="mt-5">Search for a Song</h2>
+    <form action="{{ url_for('index') }}" method="get" class="mb-4">
+        <div class="mb-3">
+            <input type="text" name="search" class="form-control" placeholder="Enter song name or artist">
+        </div>
+        <button type="submit" class="btn btn-secondary">Search</button>
+    </form>
+
     <!-- Available Songs List -->
     <h2 class="mt-5">Available Songs</h2>
     {% if songs %}
