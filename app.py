@@ -5,6 +5,8 @@ import yt_dlp
 import mido
 import joblib
 import pandas as pd
+import speech_recognition as sr
+from pydub import AudioSegment
 
 app = Flask(__name__)
 
@@ -19,6 +21,15 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 TIME_THRESHOLD = 50
 MERGE_THRESHOLD = 1000
+
+AVAILABLE_LANGUAGES = {
+    "en": "en-US",
+    "es": "es-ES",
+    "fr": "fr-FR",
+    "de": "de-DE",
+    "ru": "ru-RU",
+    "ro": "ro-RO"
+}
 
 def list_songs(directory="songs"):
     """Lists all files in the songs folder."""
@@ -77,7 +88,7 @@ def list_output_files(file_path, model=MODEL_NAME):
         print(f"Error: Output directory {output_path} not found.")
         return []
 
-    files = [f for f in os.listdir(output_path) if os.path.isfile(os.path.join(output_path, f))]
+    files = [f for f in os.listdir(output_path) if (os.path.isfile(os.path.join(output_path, f)) and f.endswith(".wav") and not f.endswith("mono.wav"))]
 
     if not files:
         print("No output files found.")
@@ -288,6 +299,62 @@ def detect_notes(midi_path, wav_filename):
     print(f"✅ Notes saved in {notes_csv_path}")
     return notes_csv_path
 
+def convert_to_mono(input_file):
+    sound = AudioSegment.from_wav(input_file)
+    sound = sound.set_channels(1)
+    mono_file = input_file.replace(".wav", "_mono.wav")
+    sound.export(mono_file, format="wav")
+    return mono_file
+
+def transcribe_audio(file_path, language="en-US"):
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(file_path) as source:
+        audio = recognizer.record(source)
+    try:
+        return recognizer.recognize_google(audio, language=language)
+    except sr.UnknownValueError:
+        return None
+    except sr.RequestError as e:
+        print(f"Error with Speech Recognition service: {e}")
+        return None
+
+@app.route('/generate_lyrics', methods=['POST'])
+def generate_lyrics():
+    filename = request.form.get('filename')
+    language = request.form.get('language', 'en-US')
+    subdir = request.form.get('subdir')  # Pass the subdir from the form
+    file_path = os.path.join(OUTPUT_DIR, MODEL_NAME, subdir, filename)
+
+    print(f"File path: {file_path}")  # Debugging log
+
+    if not os.path.exists(file_path):
+        return f"File {file_path} not found. Please process the file again.", 404
+
+    mono_file = convert_to_mono(file_path)
+    lyrics = transcribe_audio(mono_file, language)
+
+    if lyrics:
+        lyrics_file = os.path.join(OUTPUT_DIR, MODEL_NAME, subdir, f"{filename.replace('.wav', '')}_lyrics.txt")
+        with open(lyrics_file, 'w', encoding='utf-8') as f:
+            f.write(lyrics)
+        return redirect(url_for('show_lyrics', filename=f"{subdir}/{filename.replace('.wav', '')}_lyrics.txt"))
+    else:
+        return "Lyrics could not be generated.", 500
+
+
+@app.route('/lyrics/<path:filename>', methods=['GET'])
+def show_lyrics(filename):
+    lyrics_path = os.path.join(OUTPUT_DIR, MODEL_NAME, filename)
+
+    print(f"Lyrics file path: {lyrics_path}")  # Debugging log
+
+    if not os.path.exists(lyrics_path):
+        return "Lyrics file not found.", 404
+
+    with open(lyrics_path, 'r', encoding='utf-8') as f:
+        lyrics = f.read()
+
+    return render_template('lyrics.html', lyrics=lyrics)
 
 @app.route('/notes/<path:filename>', methods=['GET'])
 def show_notes(filename):
@@ -335,7 +402,9 @@ def process(filename):
         output_path = separate_audio(file_path)
         if output_path:
             files, _ = list_output_files(filename)
-            return render_template('output.html', files=files, output_path=output_path, subdir=os.path.basename(output_path))
+            # Check if lyrics exist for vocals.wav
+            lyrics_exist = os.path.exists(os.path.join(output_path, "vocals_lyrics.txt"))
+            return render_template('output.html', files=files, output_path=output_path, subdir=os.path.basename(output_path), lyrics_exist=lyrics_exist)
     return redirect(url_for('index'))
 
 @app.route('/convert_to_midi/<filename>', methods=['GET'])
@@ -350,7 +419,6 @@ def convert(filename):
 
     # Return a 204 No Content response to indicate success without content.
     return '', 204
-
 
 @app.route('/chords/<path:filename>', methods=['GET'])
 def show_chords(filename):

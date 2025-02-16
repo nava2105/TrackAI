@@ -25,6 +25,22 @@
                                 <a href="{{ url_for('show_notes', filename=subdir + '/midi/' + file.replace('.wav', '_notes.csv').replace(' ', '%20')) }}" class="btn btn-sm btn-success">View Notes</a>
                             </div>
                         {% endif %}
+                        {% if 'vocals' in file %}
+                            <form action="{{ url_for('generate_lyrics') }}" method="post" class="d-flex">
+                                <input type="hidden" name="filename" value="vocals.wav">
+                                <input type="hidden" name="subdir" value="{{ subdir }}">
+                                <select name="language" class="form-select form-select-sm me-2" style="width: auto;">
+                                    <option value="en-US">English</option>
+                                    <option value="es-ES">Spanish</option>
+                                    <option value="fr-FR">French</option>
+                                    <option value="de-DE">German</option>
+                                    <option value="ru-RU">Russian</option>
+                                    <option value="ro-RO">Romanian</option>
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-warning">Generate Lyrics</button>
+                                <a href="{{ url_for('show_lyrics', filename=subdir + '/vocals_lyrics.txt') }}" class="btn btn-sm btn-info">View Lyrics</a>
+                            </form>
+                        {% endif %}
                     </div>
                 </div>
             </li>
