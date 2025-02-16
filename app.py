@@ -5,8 +5,7 @@ import yt_dlp
 import mido
 import joblib
 import pandas as pd
-import speech_recognition as sr
-from pydub import AudioSegment
+import whisper
 
 app = Flask(__name__)
 
@@ -299,40 +298,22 @@ def detect_notes(midi_path, wav_filename):
     print(f"✅ Notes saved in {notes_csv_path}")
     return notes_csv_path
 
-def convert_to_mono(input_file):
-    sound = AudioSegment.from_wav(input_file)
-    sound = sound.set_channels(1)
-    mono_file = input_file.replace(".wav", "_mono.wav")
-    sound.export(mono_file, format="wav")
-    return mono_file
-
-def transcribe_audio(file_path, language="en-US"):
-    recognizer = sr.Recognizer()
-    with sr.AudioFile(file_path) as source:
-        audio = recognizer.record(source)
-    try:
-        return recognizer.recognize_google(audio, language=language)
-    except sr.UnknownValueError:
-        return None
-    except sr.RequestError as e:
-        print(f"Error with Speech Recognition service: {e}")
-        return None
-
 @app.route('/generate_lyrics', methods=['POST'])
 def generate_lyrics():
     filename = request.form.get('filename')
-    language = request.form.get('language', 'en-US')
-    subdir = request.form.get('subdir')  # Pass the subdir from the form
+    language = request.form.get('language', 'en').split('-')[0]  # Extract only the language part (e.g., "ru" from "ru-RU")
+    subdir = request.form.get('subdir')
     file_path = os.path.join(OUTPUT_DIR, MODEL_NAME, subdir, filename)
 
-    print(f"File path: {file_path}")  # Debugging log
+    print(f"Processing file: {file_path} with language: {language}")
 
     if not os.path.exists(file_path):
         return f"File {file_path} not found. Please process the file again.", 404
 
-    mono_file = convert_to_mono(file_path)
-    lyrics = transcribe_audio(mono_file, language)
+    model = whisper.load_model("base")
+    result = model.transcribe(file_path, language=language)
 
+    lyrics = result["text"]
     if lyrics:
         lyrics_file = os.path.join(OUTPUT_DIR, MODEL_NAME, subdir, f"{filename.replace('.wav', '')}_lyrics.txt")
         with open(lyrics_file, 'w', encoding='utf-8') as f:
@@ -340,7 +321,6 @@ def generate_lyrics():
         return redirect(url_for('show_lyrics', filename=f"{subdir}/{filename.replace('.wav', '')}_lyrics.txt"))
     else:
         return "Lyrics could not be generated.", 500
-
 
 @app.route('/lyrics/<path:filename>', methods=['GET'])
 def show_lyrics(filename):
