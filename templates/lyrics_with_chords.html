@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Songbook</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .song-container {
+            font-family: monospace;
+            white-space: pre-wrap;
+            text-align: left;
+            word-wrap: break-word;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        .chord-line {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .lyrics-line {
+            margin-top: -5px; /* Adjust spacing */
+        }
+    </style>
+</head>
+<body class="container mt-5">
+    <h1 class="text-center mb-4">Songbook</h1>
+
+    {% if formatted_lyrics %}
+    <div class="card">
+        <div class="card-body song-container">
+            {% for chord_line, lyric_line in formatted_lyrics %}
+                <div class="chord-line">{{ chord_line }}</div>
+                <div class="lyrics-line">{{ lyric_line }}</div>
+                <br>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+        <p class="text-muted text-center">No lyrics or chords found.</p>
+    {% endif %}
+
+    <a href="{{ url_for('index') }}" class="btn btn-primary mt-4">Back to Home</a>
+</body>
+</html>

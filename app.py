@@ -298,6 +298,43 @@ def detect_notes(midi_path, wav_filename):
     print(f"✅ Notes saved in {notes_csv_path}")
     return notes_csv_path
 
+@app.route('/generate_songbook', methods=['POST'])
+def generate_songbook():
+    filename = request.form.get('filename')
+    subdir = request.form.get('subdir')
+    instrument = request.form.get('instrument', 'guitar')  # Default to guitar
+
+    lyrics_file = os.path.join(OUTPUT_DIR, MODEL_NAME, subdir, "vocals_lyrics.txt")
+    chords_file = os.path.join(OUTPUT_DIR, MODEL_NAME, subdir, 'midi', f"{instrument}_filtered_chords.csv")
+
+    if not os.path.exists(lyrics_file) or not os.path.exists(chords_file):
+        return "Lyrics or Chords file not found.", 404
+
+    # Read lyrics
+    with open(lyrics_file, 'r', encoding='utf-8') as f:
+        lyrics = [line.strip() for line in f.readlines()]
+
+    # Read chords
+    chords_df = pd.read_csv(chords_file)
+    chord_list = chords_df["Predicted Chord"].tolist()
+
+    all_words = " ".join(lyrics).split()
+
+    # Ensure chord count does not exceed word count
+    chord_positions = [" " * len(word) for word in all_words]
+
+    for i in range(min(len(chord_list), len(all_words))):
+        chord_positions[i] = chord_list[i].ljust(len(all_words[i]))  # Align chord to word length
+
+    # Create alternating lines
+    formatted_lyrics = []
+    for i in range(0, len(all_words), 8):  # Group every 8 words to fit within a row
+        chord_line = " ".join(chord_positions[i:i + 8])
+        lyric_line = " ".join(all_words[i:i + 8])
+        formatted_lyrics.append((chord_line, lyric_line))
+
+    return render_template('lyrics_with_chords.html', formatted_lyrics=formatted_lyrics)
+
 @app.route('/generate_lyrics', methods=['POST'])
 def generate_lyrics():
     filename = request.form.get('filename')

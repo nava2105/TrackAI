@@ -49,7 +49,16 @@
     {% else %}
         <p class="text-muted">No processed files found.</p>
     {% endif %}
-
+    <form action="{{ url_for('generate_songbook') }}" method="post" class="d-flex">
+        <input type="hidden" name="filename" value="vocals.wav">
+        <input type="hidden" name="subdir" value="{{ subdir }}">
+        <select name="instrument" class="form-select form-select-sm me-2">
+            <option value="guitar">Guitar</option>
+            <option value="bass">Bass</option>
+            <option value="piano">Piano</option>
+        </select>
+        <button type="submit" class="btn btn-sm btn-primary">Generate Songbook</button>
+    </form>
     <a href="{{ url_for('index') }}" class="btn btn-primary mt-4">Back to Home</a>
 </body>
 </html>
