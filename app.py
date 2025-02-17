@@ -355,7 +355,7 @@ def generate_lyrics():
         lyrics_file = os.path.join(OUTPUT_DIR, MODEL_NAME, subdir, f"{filename.replace('.wav', '')}_lyrics.txt")
         with open(lyrics_file, 'w', encoding='utf-8') as f:
             f.write(lyrics)
-        return redirect(url_for('show_lyrics', filename=f"{subdir}/{filename.replace('.wav', '')}_lyrics.txt"))
+        return "", 204
     else:
         return "Lyrics could not be generated.", 500
 
