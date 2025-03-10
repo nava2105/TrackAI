@@ -50,8 +50,8 @@ model = MLPClassifier(hidden_layer_sizes=(450, 300, 200, 100, 50, 25), max_iter=
 model.fit(X, y)
 
 # Save model and encoder
-joblib.dump(model, "chord_classifier.pkl")
-joblib.dump(mlb, "notes_encoder.pkl")
+joblib.dump(model, "../model/chord_classifier.pkl")
+joblib.dump(mlb, "../model/notes_encoder.pkl")
 
 print("Model training complete. Model saved as 'chord_classifier.pkl' and encoder as 'notes_encoder.pkl'.")
 

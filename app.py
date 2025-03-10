@@ -9,8 +9,8 @@ import whisper
 
 app = Flask(__name__)
 
-model = joblib.load("chord_classifier.pkl")
-mlb = joblib.load("notes_encoder.pkl")
+model = joblib.load("model/chord_classifier.pkl")
+mlb = joblib.load("model/notes_encoder.pkl")
 UPLOAD_FOLDER = 'songs'
 OUTPUT_DIR = 'output'
 MIDI_DIR = "midi"

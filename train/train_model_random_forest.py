@@ -3,7 +3,7 @@ import joblib
 import pandas as pd
 from mido import MidiFile
 from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.svm import SVC  # Using support vector machines
+from sklearn.ensemble import RandomForestClassifier  # Using Random Forest
 import re  # For cleaning chord names
 
 # Paths
@@ -46,12 +46,12 @@ X = mlb.fit_transform(df['notes'])  # Convert lists to a feature matrix
 y = df['chord']
 
 # Train the model with Random Forest
-model = SVC(kernel='poly', C=1, degree=2, gamma='scale', random_state=42)
+model = RandomForestClassifier(n_estimators=100, max_depth=20, min_samples_split=5, min_samples_leaf=2, random_state=42)
 model.fit(X, y)
 
 # Save model and encoder
-joblib.dump(model, "chord_classifier.pkl")
-joblib.dump(mlb, "notes_encoder.pkl")
+joblib.dump(model, "../model/chord_classifier.pkl")
+joblib.dump(mlb, "../model/notes_encoder.pkl")
 
 print("Model training complete. Model saved as 'chord_classifier.pkl' and encoder as 'notes_encoder.pkl'.")
 

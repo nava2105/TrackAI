@@ -3,11 +3,10 @@ import joblib
 import pandas as pd
 from mido import MidiFile
 from sklearn.metrics import accuracy_score, classification_report
-from io import StringIO
 
 # Load trained model and encoder
-model = joblib.load("chord_classifier.pkl")
-mlb = joblib.load("notes_encoder.pkl")
+model = joblib.load("../model/chord_classifier.pkl")
+mlb = joblib.load("../model/notes_encoder.pkl")
 
 # Path to the test MIDI folder
 test_midi_folder = "C:/Users/Mateo/Documents/UCE/2024 - 2025/mineria/7200 fichiers MIDI accords piano - Ressource/training"
@@ -51,20 +50,13 @@ df_test["predicted_chord"] = model.predict(X_test)
 accuracy = accuracy_score(df_test["chord"], df_test["predicted_chord"])
 print(f"Model Accuracy: {accuracy:.2f}")
 
-# Generate classification report
-report = classification_report(df_test["chord"], df_test["predicted_chord"], zero_division=0, output_dict=True)
-
-# Print classes with precision less than 80%
-print("Classes with precision below 30%:")
-for label, metrics in report.items():
-    if isinstance(metrics, dict) and metrics["precision"] < 0.30:
-        print(f"{label}: Precision = {metrics['precision']:.2f}, Recall = {metrics['recall']:.2f}, F1-Score = {metrics['f1-score']:.2f}")
-
-print("Classes with precision below 50%:")
-for label, metrics in report.items():
-    if isinstance(metrics, dict) and metrics["precision"] < 0.50:
-        print(f"{label}: Precision = {metrics['precision']:.2f}, Recall = {metrics['recall']:.2f}, F1-Score = {metrics['f1-score']:.2f}")
-
 # Save results
 df_test.to_csv("test_results.csv", index=False)
+
+# Print results
 print("Testing complete. Results saved in 'test_results.csv'.")
+print(df_test[["filename", "chord", "predicted_chord"]])
+
+report = classification_report(df_test["chord"], df_test["predicted_chord"], zero_division=0)
+print("Classification Report:")
+print(report)

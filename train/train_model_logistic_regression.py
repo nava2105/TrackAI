@@ -3,7 +3,7 @@ import joblib
 import pandas as pd
 from mido import MidiFile
 from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.ensemble import RandomForestClassifier  # Using Random Forest
+from sklearn.linear_model import LogisticRegression  # Using Logistic Regression
 import re  # For cleaning chord names
 
 # Paths
@@ -46,17 +46,17 @@ X = mlb.fit_transform(df['notes'])  # Convert lists to a feature matrix
 y = df['chord']
 
 # Train the model with Random Forest
-model = RandomForestClassifier(n_estimators=100, max_depth=20, min_samples_split=5, min_samples_leaf=2, random_state=42)
+model = LogisticRegression(max_iter=1000, random_state=42)
 model.fit(X, y)
 
 # Save model and encoder
-joblib.dump(model, "chord_classifier.pkl")
-joblib.dump(mlb, "notes_encoder.pkl")
+joblib.dump(model, "../model/chord_classifier.pkl")
+joblib.dump(mlb, "../model/notes_encoder.pkl")
 
 print("Model training complete. Model saved as 'chord_classifier.pkl' and encoder as 'notes_encoder.pkl'.")
 
 """"
-Model Accuracy: 0.86
+Model Accuracy: 0.82
 Testing complete. Results saved in 'test_results.csv'.
               filename  chord predicted_chord
 0         I - BbM7.mid   BbM7          Bbmaj7
