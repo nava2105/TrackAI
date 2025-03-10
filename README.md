@@ -78,3 +78,6 @@ TrackAI is developed in Python 3.9, utilizing:
 
 ## Usage
 Once the application is up and running, you can interact with the system by uploading audio files for processing, generating lyrics, and viewing chords.
+
+### License
+This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
