@@ -27,7 +27,8 @@ AVAILABLE_LANGUAGES = {
     "fr": "fr-FR",
     "de": "de-DE",
     "ru": "ru-RU",
-    "ro": "ro-RO"
+    "ro": "ro-RO",
+    "tr": "tr-TR"
 }
 
 def list_songs(directory="songs"):
